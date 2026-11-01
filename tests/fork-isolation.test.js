@@ -1,0 +1,11 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const pkg = require('../package.json');
+const read = f => fs.readFileSync(path.join(root, f), 'utf8');
+test('separate Windows installation identity', () => { assert.equal(pkg.build.appId, 'com.eltawalbeh.island.dev'); assert.equal(pkg.build.productName, 'Island Dev'); assert.equal(pkg.build.win.executableName, 'Island Dev'); });
+test('release updates never point to upstream', () => { assert.equal(pkg.build.publish.owner, 'eltawalbeh'); assert.equal(pkg.build.publish.repo, 'nova-island'); assert.match(read('features.js'), /autoUpdate:\s*false/); assert.match(read('updater.js'), /trustedReleaseSource\(\)/); });
+test('no changes to original app shortcuts/data', () => { const main = read('nova.js'); assert.match(main, /eltawalbeh-island-dev/); assert.match(main, /Island Dev\.lnk/); assert.doesNotMatch(main, /migrateStartup\(\)/); });
+test('GPL license retained', () => assert.match(read('LICENSE'), /GNU GENERAL PUBLIC LICENSE/));

@@ -6,7 +6,9 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis",
-    "dist:portable": "electron-builder --win portable"
+    "dist:portable": "electron-builder --win portable",
+    "test": "node --test",
+    "check:syntax": "node scripts/check-syntax.js"
   },
   "author": "AmerTech",
   "license": "GPL-3.0-only",
@@ -15,8 +17,8 @@
     "electron-builder": "^26.17.0"
   },
   "build": {
-    "appId": "com.dynamicnova.app",
-    "productName": "Nova Island",
+    "appId": "com.eltawalbeh.island.dev",
+    "productName": "Island Dev",
     "copyright": "Copyright © 2026 Nova Island by AmerTech",
     "electronLanguages": [
       "en-US",
@@ -40,7 +42,7 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "NOVA-TECH-KIT",
+      "owner": "eltawalbeh",
       "repo": "nova-island"
     },
     "asarUnpack": [
@@ -51,24 +53,24 @@
         "nsis"
       ],
       "icon": "build/icon.ico",
-      "executableName": "Nova Island"
+      "executableName": "Island Dev"
     },
     "nsis": {
       "oneClick": false,
-      "artifactName": "Nova-Island-Setup-${version}.${ext}",
+      "artifactName": "Island-Dev-Setup-${version}.${ext}",
       "license": "LICENSE",
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Nova Island",
+      "shortcutName": "Island Dev",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false
     },
     "portable": {
-      "artifactName": "Nova Island ${version} portable.exe"
+      "artifactName": "Island Dev ${version} portable.exe"
     }
   },
   "dependencies": {

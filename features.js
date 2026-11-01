@@ -32,7 +32,7 @@ const DEFAULTS = {
   folderDownloads: true, // browser downloads, seen in the download folders
   // window
   hideFullscreen: true,
-  autoUpdate: true, // download new versions from GitHub and offer a restart on the island
+  autoUpdate: false, // opt-in for this fork; never automatically update from the upstream project
   addrIsland: true, // take the right third of the browser's address bar
   // System tab
   clipboardHistory: true,

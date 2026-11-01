@@ -4,6 +4,12 @@
 const { app } = require('electron');
 const log = require('./log');
 
+// Allow update checks only from this fork's explicitly approved release source.
+function trustedReleaseSource() {
+  const s = require('./package.json').build?.publish;
+  return s?.provider === 'github' && s?.owner === 'eltawalbeh' && s?.repo === 'nova-island';
+}
+
 const FIRST_CHECK_MS = 60 * 1000;
 const EVERY_MS = 6 * 60 * 60 * 1000;
 
@@ -48,7 +54,7 @@ function retrySoon() {
 
 function start(sendFn, on) {
   send = sendFn;
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || !trustedReleaseSource()) return;
   ({ autoUpdater: updater } = require('electron-updater'));
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;

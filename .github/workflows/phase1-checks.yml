@@ -1,0 +1,21 @@
+name: Phase 1 foundation checks
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node scripts/check-syntax.js
+      - name: Foundation tests
+        run: node --test

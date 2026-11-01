@@ -5,10 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// One data folder for the installed app ("Dynamic Nova") and dev runs ("dynamic-nova"), so
-// settings, apps and caches carry over, and the single-instance lock covers both. Must run
-// before any module below reads app.getPath('userData').
-app.setPath('userData', path.join(app.getPath('appData'), 'dynamic-nova'));
+// Give this fork its own data folder, separate from upstream installation.
+// Set before any module reads app.getPath('userData').
+app.setPath('userData', path.join(app.getPath('appData'), 'eltawalbeh-island-dev'));
 const log = require('./log');
 log.init();
 
@@ -435,7 +434,7 @@ async function onClipboardSeq(seq, isPrivate) {
 }
 
 // The Snipping Tool saves every capture to Pictures\Screenshots by itself: that file goes on the
-// shelf (no second copy). Any other copied image is saved to Pictures\Nova Island first.
+// shelf (no second copy). Any other copied image is saved to Pictures\Island Dev first.
 const SNIP_WAIT_MS = 2500;
 async function windowsScreenshot(since) {
   const dir = path.join(app.getPath('pictures'), 'Screenshots');
@@ -460,7 +459,7 @@ async function shotToShelf(until = 0) {
   try {
     let file = until ? await windowsScreenshot(copiedAt) : null;
     if (!file) {
-      const dir = path.join(app.getPath('pictures'), 'Nova Island');
+      const dir = path.join(app.getPath('pictures'), 'Island Dev');
       const pad = (n) => String(n).padStart(2, '0');
       const d = new Date();
       file = path.join(dir, `Screenshot ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`);
@@ -716,7 +715,7 @@ ipcMain.on('dl-control', (_e, id, action) => downloads.control(typeof id === 'st
 // Start with Windows = a shortcut in the user's Startup folder (works for both the dev
 // launch "electron.exe <folder>" and a packaged build).
 function startupLink() {
-  return path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'Nova Island.lnk');
+  return path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'Island Dev.lnk');
 }
 
 function shortcutOptions() {
@@ -726,7 +725,7 @@ function shortcutOptions() {
     cwd: __dirname,
     icon: path.join(__dirname, 'build', 'icon.ico'),
     iconIndex: 0,
-    description: 'Nova Island',
+    description: 'Island Dev',
   };
 }
 
@@ -749,11 +748,11 @@ function setStartWithWindows(on) {
   return shell.writeShortcutLink(link, 'create', shortcutOptions());
 }
 
-// "Setup Nova Island.cmd" launches the app with --setup: create the desktop icon and the
+// "Setup Island Dev.cmd" launches the app with --setup: create the desktop icon and the
 // startup entry, and write what happened to setup-log.txt next to the app.
 function runSetup() {
-  const lines = [`Nova Island setup - ${new Date().toLocaleString()}`];
-  const desktop = path.join(app.getPath('desktop'), 'Nova Island.lnk');
+  const lines = [`Island Dev setup - ${new Date().toLocaleString()}`];
+  const desktop = path.join(app.getPath('desktop'), 'Island Dev.lnk');
   try {
     const ok = shell.writeShortcutLink(desktop, 'create', shortcutOptions());
     lines.push(`${ok && fs.existsSync(desktop) ? 'OK  ' : 'FAIL'} desktop shortcut: ${desktop}`);
@@ -781,7 +780,7 @@ app.on('second-instance', (_e, argv) => {
 // --- menus ---
 function appMenu() {
   return Menu.buildFromTemplate([
-    { label: 'Nova Island', enabled: false },
+    { label: 'Island Dev', enabled: false },
     { type: 'separator' },
     {
       label: 'Show island',
@@ -832,7 +831,7 @@ ipcMain.handle('general-get', () => generalState());
 const SUPPORT_LINKS = {
   kofi: 'https://ko-fi.com/binamer',
   instapay: 'https://ipn.eg/S/binamerbm/instapay/38txJO',
-  github: 'https://github.com/NOVA-TECH-KIT/nova-island',
+  github: 'https://github.com/eltawalbeh/nova-island',
 };
 ipcMain.on('open-support', (_e, key) => {
   if (Object.hasOwn(SUPPORT_LINKS, key)) shell.openExternal(SUPPORT_LINKS[key]);
@@ -961,43 +960,13 @@ function trayIcon() {
 
 function buildTray() {
   tray = new Tray(trayIcon());
-  tray.setToolTip('Nova Island');
+  tray.setToolTip('Island Dev');
   tray.on('click', () => tray.popUpContextMenu(appMenu()));
   tray.on('right-click', () => tray.popUpContextMenu(appMenu()));
 }
 
-// The installed app replaces a dev setup's Startup-folder shortcut with the system login item.
-// Builds from before the rename ("Dynamic Nova") left their own login item and shortcuts.
-function migrateStartup() {
-  const startup = path.dirname(startupLink());
-  const oldLinks = [path.join(startup, 'Dynamic Nova.lnk'), path.join(app.getPath('desktop'), 'Dynamic Nova.lnk')];
-  let wasOn = fs.existsSync(oldLinks[0]);
-  for (const f of oldLinks) {
-    try { fs.unlinkSync(f); } catch {}
-  }
-  if (!app.isPackaged) {
-    if (wasOn) setStartWithWindows(true);
-    return;
-  }
-  const link = startupLink();
-  if (fs.existsSync(link)) {
-    wasOn = true;
-    try { fs.unlinkSync(link); } catch {}
-  }
-  // The old login item runs the removed "Dynamic Nova.exe", which Electron can't see once that
-  // file is gone, so the first run after the rename removes it blind. An existing data folder
-  // means the old build was installed with start-with-Windows on, so the new item takes over.
-  const renamed = path.join(app.getPath('userData'), 'renamed');
-  if (!fs.existsSync(renamed)) {
-    if (fs.existsSync(path.join(app.getPath('userData'), 'settings.json'))) wasOn = true;
-    app.setLoginItemSettings({ name: 'electron.app.Dynamic Nova', openAtLogin: false });
-    try { fs.writeFileSync(renamed, ''); } catch {}
-  }
-  if (wasOn) app.setLoginItemSettings({ openAtLogin: true });
-}
-
+// Do not migrate or remove any upstream startup shortcuts or login settings.
 app.whenReady().then(() => {
-  migrateStartup();
   if (process.argv.includes('--setup')) runSetup();
   createWindow();
   buildTray();
