@@ -22,3 +22,6 @@ A GitHub-hosted Windows runner is **not an interactive Windows desktop**; succes
 
 ## Safety
 Development build keeps **Island Dev** placeholder branding and upstream assets. No public distribution until rebranding, licensing and security review is complete.
+
+## Fix from initial CI run
+The first QA attempt successfully compiled the native helper and generated the NSIS installer, but electron-builder tried implicit release publishing in CI and failed without a GitHub token. The `dist` and `dist:portable` scripts now explicitly pass `--publish never`. This is deliberate: **QA builds must never publish themselves**.
