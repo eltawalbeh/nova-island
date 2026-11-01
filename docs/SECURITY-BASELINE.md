@@ -24,3 +24,5 @@ No malware scan, binary verification, real Windows execution or performance cert
 - Clipboard text history, smart clipboard, clipboard screenshot notifications, and automatic screenshot shelf are off by default for new installs, with user opt-in available.
 - The Windows CI workflow attempts to rebuild the native helper and package the development installer, without publishing it.
 - Desktop glass capture and repeated background polling still require a real-device performance profile.
+
+- Clipboard reads are now gated before calling Electron's clipboard API, including initialization, so opt-out actually suppresses clipboard text access. Clearing history also clears the last smart classification.

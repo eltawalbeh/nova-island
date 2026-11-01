@@ -4,6 +4,7 @@ const { clipboard } = require('electron');
 const features = require('./features');
 const settings = require('./settings');
 const smartclip = require('./smartclip');
+const { mayReadClipboard } = require('./privacy-policy');
 
 let send = () => {};
 
@@ -33,9 +34,11 @@ function tickStats() {
 const MAX_CLIPS = 8;
 let clips = [];
 let lastClip = '';
-clipboard.readText().then((t) => { lastClip = t || ''; }).catch(() => {});
+if (mayReadClipboard(features.get())) {
+  clipboard.readText().then((t) => { lastClip = t || ''; }).catch(() => {});
+}
 async function clipboardChanged(isPrivate) {
-  if (isPrivate) return;
+  if (isPrivate || !mayReadClipboard(features.get())) return;
   let text = '';
   try { text = await clipboard.readText(); } catch { return; }
   if (typeof text !== 'string' || !text || text === lastClip) return;
@@ -67,6 +70,7 @@ function copyClip(i) {
 }
 function clearClips() {
   clips = [];
+  smart = null;
   send('clipboard', []);
 }
 
