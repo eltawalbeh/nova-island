@@ -5,6 +5,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { shell } = require('electron');
 const folderDownloads = require('./browser-downloads');
+const { isSafeThumbnailUrl, readImageWithLimit } = require('./thumbnail-safety');
 
 const BASE = 'http://127.0.0.1:17890';
 // IDM Nova only answers callers that know the secret it keeps in the user's profile.
@@ -27,7 +28,6 @@ const forgetToken = () => {
 const FAST_MS = 700;
 const IDLE_MS = 2500;
 const OFFLINE_MS = 6000;
-const MAX_THUMB = 400 * 1024;
 
 let send = () => {};
 let items = [];
@@ -46,16 +46,16 @@ const exePath = () => EXE_CANDIDATES.find((p) => p && fs.existsSync(p)) || null;
 
 // The island's CSP only allows data: images, so remote thumbnails are inlined here.
 async function loadThumb(url) {
-  if (thumbs.has(url) || !/^https?:\/\//.test(url)) return;
+  if (thumbs.has(url) || !isSafeThumbnailUrl(url)) return;
   thumbs.set(url, '');
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    const type = (r.headers.get('content-type') || '').match(/^image\/[\w.+-]+/)?.[0];
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (r.ok && type && buf.length <= MAX_THUMB) {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: 'error' });
+    const type = (r.headers.get('content-type') || '').match(/^image\/(?:png|jpeg|webp|gif)(?=\s*;|\s*$)/i)?.[0]?.toLowerCase();
+    if (!type) return;
+    const buf = await readImageWithLimit(r);
+    if (buf && enabled && items.some(d => d.thumbnail === url)) {
       const data = `data:${type};base64,${buf.toString('base64')}`;
       thumbs.set(url, data);
-      // sent once; progress updates only carry the (short) remote URL
       send('dl-thumb', { url, data });
     }
   } catch {}

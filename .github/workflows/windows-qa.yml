@@ -1,0 +1,54 @@
+name: Windows build and native QA
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit
+      - name: Static syntax checks
+        run: npm run check:syntax
+      - name: Node regression tests
+        run: npm test
+      - name: Compile C-sharp Windows integration helper
+        shell: pwsh
+        run: |
+          $original = (Get-FileHash helper/nova-helper.exe -Algorithm SHA256).Hash
+          Push-Location helper
+          cmd /c build.cmd
+          if ($LASTEXITCODE -ne 0) { throw "Native helper compilation failed: $LASTEXITCODE" }
+          Pop-Location
+          if (!(Test-Path helper/nova-helper.exe)) { throw "Native helper output missing" }
+          $rebuilt = (Get-FileHash helper/nova-helper.exe -Algorithm SHA256).Hash
+          "Bundled helper SHA256: $original" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "Rebuilt helper SHA256: $rebuilt" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          if ($original -ne $rebuilt) {
+            "Hashes differ: investigate compiler/build reproducibility; do NOT assume a malware finding." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+      - name: Build Windows installer (QA only - no release)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist
+      - name: Verify installer generated
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -Path dist -Filter "Island-Dev-Setup-*.exe" -File)
+          if ($files.Count -lt 1) { throw "No Windows installer was generated" }
+          "QA installer built (not published): $($files[0].Name) ($($files[0].Length) bytes)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+      - name: Dependency audit (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=high

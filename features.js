@@ -35,10 +35,10 @@ const DEFAULTS = {
   autoUpdate: false, // opt-in for this fork; never automatically update from the upstream project
   addrIsland: true, // take the right third of the browser's address bar
   // System tab
-  clipboardHistory: true,
+  clipboardHistory: false, // privacy-first opt-in; copies may contain confidential text
   // copied image / screenshot -> toast; on the Shelf by itself for a while, or "Add to Shelf"
-  screenshotToast: true,
-  shotAutoShelf: true,
+  screenshotToast: false, // privacy-first: no automatic clipboard screenshot processing
+  shotAutoShelf: false, // opt in before storing clipboard images on disk
   shotShelfMinutes: 20,
   // mic / camera in use
   privacyDots: true,
@@ -47,7 +47,7 @@ const DEFAULTS = {
   welcomeBack: true,
   morningBrief: true,
   wellbeing: true,
-  smartClipboard: true,
+  smartClipboard: false, // opt in before analyzing clipboard text
   novaEyes: true,
   novaPrayer: true, // Nova in her prayer cap at the adhan
   novaFocus: true, // Nova with her headband at focus start / end

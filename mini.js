@@ -170,13 +170,19 @@ function close(time, resume) {
 }
 
 // ---- IPC from the mini page ----
-ipcMain.on('mini-time', (_e, t) => {
-  if (typeof t === 'number' && Number.isFinite(t)) lastTime = t;
+// An IPC channel is global within Electron: explicitly verify the sending window.
+function fromMini(event) {
+  return !!win && !win.isDestroyed() && event.sender === win.webContents;
+}
+ipcMain.on('mini-time', (e, t) => {
+  if (fromMini(e) && typeof t === 'number' && Number.isFinite(t) && t >= 0) lastTime = t;
 });
-ipcMain.on('mini-close', (_e, { time, resume }) => close(time, !!resume));
+ipcMain.on('mini-close', (e, payload = {}) => {
+  if (fromMini(e)) close(payload.time, !!payload.resume);
+});
 
-ipcMain.on('mini-resize-start', (_e, corner) => {
-  if (!win) return;
+ipcMain.on('mini-resize-start', (e, corner) => {
+  if (!fromMini(e) || resize) return;
   resize = { corner: corner === 'bl' ? 'bl' : 'br', start: screen.getCursorScreenPoint(), b: win.getBounds() };
   resize.timer = setInterval(() => {
     if (!win || !resize) return;
@@ -195,8 +201,8 @@ ipcMain.on('mini-resize-start', (_e, corner) => {
     win.setBounds({ x, y, width, height });
   }, 10);
 });
-ipcMain.on('mini-resize-end', () => {
-  if (!resize) return;
+ipcMain.on('mini-resize-end', (e) => {
+  if (!fromMini(e) || !resize) return;
   clearInterval(resize.timer);
   resize = null;
   snap();

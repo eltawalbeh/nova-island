@@ -17,3 +17,10 @@
 5. Check licenses for non-GPL assets, notably the bundled Qur'an font; sign the installer and establish a release process.
 
 No malware scan, binary verification, real Windows execution or performance certification has been completed in this phase.
+
+## Phase 1 continuation — additional source hardening
+- Thumbnail downloader now restricts URL shapes to public HTTPS hostnames, disallows redirects and buffers at most 400 KiB. This reduces risk from malformed data/oversized images; **DNS rebinding and provider trust require additional security review**.
+- Mini Player IPC verifies the event sender belongs to its own window.
+- Clipboard text history, smart clipboard, clipboard screenshot notifications, and automatic screenshot shelf are off by default for new installs, with user opt-in available.
+- The Windows CI workflow attempts to rebuild the native helper and package the development installer, without publishing it.
+- Desktop glass capture and repeated background polling still require a real-device performance profile.
