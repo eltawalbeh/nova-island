@@ -1,0 +1,72 @@
+name: Build and publish Windows test pre-release
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/test-prerelease.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    if: github.repository == 'eltawalbeh/nova-island'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit
+      - name: Run regression and security checks
+        shell: pwsh
+        run: |
+          npm run check:syntax
+          if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed" }
+          npm test
+          if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+          npm audit --audit-level=high
+          if ($LASTEXITCODE -ne 0) { throw "High severity dependency finding" }
+      - name: Rebuild C-sharp native helper from checked-in source
+        shell: pwsh
+        run: |
+          Push-Location helper
+          cmd /c build.cmd
+          $code = $LASTEXITCODE
+          Pop-Location
+          if ($code -ne 0) { throw "Native helper compilation failed" }
+      - name: Replace upstream icon with neutral test icon
+        shell: pwsh
+        run: .github/scripts/make-test-icon.ps1
+      - name: Replace remaining product name mentions in build assets
+        run: node scripts/test-build-copy.js
+      - name: Set isolated pre-release version (build workspace only)
+        run: npm version 0.1.0-test.1 --no-git-tag-version
+      - name: Build unsigned Windows installer (never auto-publish)
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm run dist
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+      - name: Verify installer, generate checksum and publish pre-release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "v0.1.0-test.1"
+          $installer = "dist/Island-Dev-Setup-0.1.0-test.1.exe"
+          if (!(Test-Path $installer)) { throw "Installer not found: $installer" }
+          $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "dist/SHA256SUMS.txt" -Value "$sha256  Island-Dev-Setup-0.1.0-test.1.exe" -Encoding ascii
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Test release $tag already exists. Refusing to overwrite." }
+          gh release create $tag $installer "dist/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Island Dev v0.1.0-test.1 — Windows QA" --notes-file "docs/TEST-RELEASE-NOTES.md" --prerelease --latest=false
+          if ($LASTEXITCODE -ne 0) { throw "Pre-release upload failed" }
+          gh release view $tag --repo $env:GITHUB_REPOSITORY --json url,assets --jq '.url, (.assets[].name)'
+          if ($LASTEXITCODE -ne 0) { throw "Pre-release verification failed" }
